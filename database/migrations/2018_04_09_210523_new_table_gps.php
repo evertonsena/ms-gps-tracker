@@ -17,10 +17,12 @@ class NewTableGps extends Migration
             $table->bigIncrements('id');
             $table->string('latitude');
             $table->string('longitude');
-            $table->integer('imei');
+            $table->string('imei');
             $table->string('speed');
             $table->string('direction');
             $table->string('gps_time');
+            $table->dateTime('created_at');
+            $table->dateTime('updated_at');
         });
     }
 

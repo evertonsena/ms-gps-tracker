@@ -27,13 +27,18 @@ class ServerGpsTK103bCommand extends Command
      */
     public function handle()
     {
-        if(!$server = new StreamSocketTk103bService()) {
+        $ip = env('IP_SERVER', '0.0.0.0');
+        $port = env('PORT_SERVER', '7331');
+        $protocol = env('PROTOCOL_SERVER', 'tcp');
+
+        if(!$server = new StreamSocketTk103bService($ip, $port, $protocol)) {
             $this->error($server->getError());
             return false;
         }
 
         $this->info('Servidor no ar!');
 
-        $server->listen($this);
+        $server->setCommand($this)
+               ->listen();
     }
 }
