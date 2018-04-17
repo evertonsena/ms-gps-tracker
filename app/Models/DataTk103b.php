@@ -58,19 +58,19 @@ class DataTk103b
     {
         if(!$this->data)
         {
-            Log::error('Dados para o rastreador TK103b não enviado');
+            Log::error('Dados para o rastreador TK103b nÃ£o enviado');
             return false;
         }
 
         if(!$this->saveDataGps()) {
-            Log::error('Não foi possível persisti os dados no database' .
+            Log::error('NÃ£o foi possÃ­vel persisti os dados no database' .
                 'para o rastreador TK103b... ');
             return false;
         }
         return true;
     }
 
-    private function saveDataGps()
+    protected function saveDataGps()
     {
         return Gps::create([
             'latitude' => $this->latitude,

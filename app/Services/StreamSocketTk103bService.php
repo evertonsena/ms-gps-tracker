@@ -27,21 +27,38 @@ class StreamSocketTk103bService
 
     private $client_sockets;
 
+    private $errorStreamServerMessage;
+
+    private $errnoStreamServer;
+
+    /**
+     * Sobe server stream socket.
+     * @param $ip - Ip utilizado para prover o servidor
+     * @param $port - Porta utilizada para prover o servidor
+     * @param $protocol - Protocolo utilizado para prover o servidor
+     */
+    public function server($ip, $port, $protocol)
+    {
+        $this->server = $this->streamServer($ip, $port, $protocol);
+        if ($this->server === false) {
+            $this->error = "stream_socket_server error: {$this->errorStreamServerMessage}";
+            return false;
+        }
+        return $this;
+    }
+
     /**
      * StreamSocketTk103bService constructor.
      * @param $ip - Ip utilizado para prover o servidor
      * @param $port - Porta utilizada para prover o servidor
      * @param $protocol - Protocolo utilizado para prover o servidor
+     * @codeCoverageIgnore
      */
-    public function __construct($ip, $port, $protocol)
+    protected function streamServer($ip, $port, $protocol)
     {
-        $this->server = stream_socket_server(
-            "{$protocol}://{$ip}:$port", $errno, $errorMessage
+        return stream_socket_server(
+            "{$protocol}://{$ip}:$port", $this->errnoStreamServer, $this->errorStreamServerMessage
         );
-        if ($this->server === false) {
-            $this->error = "stream_socket_server error: {$errorMessage}";
-            return false;
-        }
     }
 
     /**
@@ -150,7 +167,7 @@ class StreamSocketTk103bService
     }
 
     /**
-     * Escuta a porta definida para comunicação com o rastreador
+     * Escuta a porta definida para comunicaÃ§Ã£o com o rastreador
      * @param ServerGpsTK103bCommand $command
      * @return bool
      */

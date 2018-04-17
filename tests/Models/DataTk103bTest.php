@@ -11,11 +11,6 @@ class DataTk103bTest extends TestCase
 {
     use DatabaseMigrations;
 
-    function __construct()
-    {
-        parent::setUp();
-    }
-
     public function testSetDataExpectedReturnClassInstance()
     {
         $modelTest = new DataTk103b();
@@ -41,18 +36,17 @@ class DataTk103bTest extends TestCase
 
     public function testSaveExistDataFailedSavedDataGpsExpectedReturnFalse()
     {
-        $modelTest = (new DataTk103b())->setData($this->getDataFromGps());
+        $modelTest = \Mockery::mock(DataTk103b::class)
+                    ->shouldAllowMockingProtectedMethods()
+                    ->makePartial();
+        $modelTest->shouldReceive('saveDataGps')
+                  ->andReturn(false);
 
         Log::shouldReceive('error')
             ->once()
             ->andReturn(true);
 
-        $return = $modelTest->save();
-
-        $this->markTestIncomplete(
-            'Marcado como incompleto pois não consigo provocar um erro ao salvar no modelo. ' .
-            'Mesmo usando mock não consegui forçar um return false no metodo saveDataGps()'
-        );
+        $return = $modelTest->setData($this->getDataFromGps())->save();
 
         $this->assertFalse($return, 'Esperasse que retorne false apos ' .
             'falha ao salvar dados');

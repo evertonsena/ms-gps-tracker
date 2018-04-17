@@ -31,7 +31,7 @@ class ServerGpsTK103bCommand extends Command
         $port = env('PORT_SERVER', '7331');
         $protocol = env('PROTOCOL_SERVER', 'tcp');
 
-        if(!$server = new StreamSocketTk103bService($ip, $port, $protocol)) {
+        if(!$server = (new StreamSocketTk103bService())->server($ip, $port, $protocol)) {
             $this->error($server->getError());
             return false;
         }
