@@ -4,8 +4,17 @@ use Illuminate\Support\Facades\Log;
 use App\Services\StreamSocketTk103bService;
 use App\Console\Commands\ServerGpsTK103bCommand;
 
+use Laravel\Lumen\Testing\DatabaseMigrations;
+use Laravel\Lumen\Testing\DatabaseTransactions;
+
+use App\Models\DataTk103b;
+use App\Models\Gps;
+
+
 class StreamSocketTk103bServiceTest extends TestCase
 {
+    use DatabaseMigrations;
+
     public function testServerFailedStreamSocketServerExpectedReturnFalse()
     {
         $serviceTest = \Mockery::mock(StreamSocketTk103bService::class)
@@ -138,4 +147,163 @@ class StreamSocketTk103bServiceTest extends TestCase
         $this->assertCount(1, $serviceTest->client_sockets,
             'Esperasse que um cliente tenha sido lido');
     }
+
+    public function testListenMessageFromClientSendImeiExpectedResponseEqualON()
+    {
+        $serviceTest = \Mockery::mock(StreamSocketTk103bService::class)
+            ->shouldAllowMockingProtectedMethods()
+            ->makePartial();
+
+        $serviceTest->shouldReceive('fileRead')
+            ->andReturn('359710049095095');
+
+        $serviceTest->shouldReceive('writeCommandInfo', 'fileWrite')
+            ->andReturn(true);
+
+        $serviceTest->read_sockets = [
+            'ServerOne' => 'dataFromClientOne'
+        ];
+
+        $return = $serviceTest->listenMessageFromClient();
+
+        $this->assertTrue($return, 'Esperasse que retorne true');
+
+        $this->assertEquals('ON', $serviceTest->response, 'Esperasse que a resposta seja ON do server');
+    }
+
+    public function testListenMessageFromClientSendMessageExpectedResponseEqualLOAD()
+    {
+        $serviceTest = \Mockery::mock(StreamSocketTk103bService::class)
+            ->shouldAllowMockingProtectedMethods()
+            ->makePartial();
+
+        $serviceTest->shouldReceive('fileRead')
+            ->andReturn('##,imei:359710049095095,A');
+
+        $serviceTest->shouldReceive('writeCommandInfo', 'fileWrite')
+            ->andReturn(true);
+
+        $serviceTest->read_sockets = [
+            'ServerOne' => 'dataFromClientOne'
+        ];
+
+        $return = $serviceTest->listenMessageFromClient();
+
+        $this->assertTrue($return, 'Esperasse que retorne true');
+
+        $this->assertEquals('LOAD', $serviceTest->response, 'Esperasse que a resposta seja LOAD do server');
+    }
+
+    public function testListenMessageFromClientSendMessageFailedSaveDataGpsExpectedResponseFalse()
+    {
+        $serviceTest = \Mockery::mock(StreamSocketTk103bService::class)
+            ->shouldAllowMockingProtectedMethods()
+            ->makePartial();
+
+        $serviceTest->shouldReceive('fileRead')
+            ->andReturn('imei:359710049095095,tracker,151006012336,,F,172337.000,A,5105.9792,N,11404.9599,W,0.01,322.56,,0,0,,,');
+
+        $serviceTest->shouldReceive('writeCommandInfo', 'fileWrite')
+            ->andReturn(true);
+
+        $modelTest = \Mockery::mock(DataTk103b::class)
+            ->makePartial();
+        $modelTest->shouldReceive('save')
+            ->andReturn(false);
+
+        $serviceTest->shouldReceive('getInstanceDataTk103b')
+            ->andReturn($modelTest);
+
+        $serviceTest->read_sockets = [
+            'ServerOne' => 'dataFromClientOne'
+        ];
+
+        $return = $serviceTest->listenMessageFromClient();
+
+        $this->assertFalse($return, 'Esperasse que retorne false após a falha');
+
+        $this->assertEquals('', $serviceTest->response, 'Esperasse que não tenha resposta do server');
+    }
+
+    public function testListenMessageFromClientSendMessageSuccessSaveDataGpsExpectedResponseTrue()
+    {
+        $serviceTest = \Mockery::mock(StreamSocketTk103bService::class)
+            ->shouldAllowMockingProtectedMethods()
+            ->makePartial();
+
+        $serviceTest->shouldReceive('fileRead')
+            ->andReturn('imei:359710049095095,tracker,151006012336,,F,172337.000,A,5105.9792,N,11404.9599,W,0.01,322.56,,0,0,,,');
+
+        $serviceTest->shouldReceive('writeCommandInfo', 'fileWrite')
+            ->andReturn(true);
+
+        $serviceTest->read_sockets = [
+            'ServerOne' => 'dataFromClientOne'
+        ];
+
+        $return = $serviceTest->listenMessageFromClient();
+
+        $this->assertTrue($return, 'Esperasse que retorne true');
+
+        $this->assertEquals('', $serviceTest->response, 'Esperasse que não tenha resposta do server');
+
+        $this->seeInDatabase('gps', ['imei' => '359710049095095']);
+    }
+
+    public function testListenMessageFromClientSendMessageContainingAlarmHelpMeSuccessSaveDataGpsExpectedResponseTrue()
+    {
+        $serviceTest = \Mockery::mock(StreamSocketTk103bService::class)
+            ->shouldAllowMockingProtectedMethods()
+            ->makePartial();
+
+        $serviceTest->shouldReceive('fileRead')
+            ->andReturn('imei:359710049095095,help me,151006012336,,F,172337.000,A,5105.9792,N,11404.9599,W,0.01,322.56,,0,0,,,');
+
+        $serviceTest->shouldReceive('writeCommandInfo', 'fileWrite')
+            ->andReturn(true);
+
+        $serviceTest->read_sockets = [
+            'ServerOne' => 'dataFromClientOne'
+        ];
+
+        $return = $serviceTest->listenMessageFromClient();
+
+        $this->assertTrue($return, 'Esperasse que retorne true');
+
+        $this->assertEquals('**,imei:359710049095095,E;', $serviceTest->response,
+            'Esperasse que contenha a resposta com IMEI do client');
+
+        $this->seeInDatabase('gps', ['imei' => '359710049095095']);
+    }
+
+    public function testListenMessageFromClientMessageSentIsEmptyExpectedResponseEqualEmptyAndReturnFalse()
+    {
+        $serviceTest = \Mockery::mock(StreamSocketTk103bService::class)
+            ->shouldAllowMockingProtectedMethods()
+            ->makePartial();
+
+        $serviceTest->shouldReceive('fileRead')
+            ->andReturn(false);
+
+        $serviceTest->shouldReceive('writeCommandInfo', 'fileClose')
+            ->andReturn(true);
+
+        $serviceTest->client_sockets = [
+            'clientOne' => 'dataFromClientOne'
+        ];
+        $serviceTest->read_sockets = [
+            'ServerOne' => 'dataFromClientOne'
+        ];
+
+        $return = $serviceTest->listenMessageFromClient();
+
+        $this->assertFalse($return, 'Esperasse que retorne false');
+
+        $this->assertEquals('', $serviceTest->response,
+            'Esperasse que não tenha resposta do server');
+
+        $this->assertCount(0, $serviceTest->client_sockets,
+            'Esperasse que não tenha cliente sendo escutado');
+    }
+
 }
